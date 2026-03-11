@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lusatech – Dashboard Actividades</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--card:#1c2129;--border:#30363d;--accent:#f0a500;--red:#ff4444;--blue:#388bfd;--purple:#a371f7;--green:#3fb950;--text:#e6edf3;--muted:#8b949e;--p1:#f0a500;--p2:#58a6ff;--p3:#8b949e;--pp:#ff7b72}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;font-size:13px;min-height:100vh}
+
+/* HEADER */
+.header{background:linear-gradient(135deg,#1c2230 0%,#0d1117 70%);border-bottom:2px solid var(--accent);padding:12px 24px;display:flex;align-items:center;gap:16px}
+.logo{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--accent);letter-spacing:3px}
+.logo-sub{font-size:10px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-top:1px}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.hdate{background:rgba(240,165,0,.1);border:1px solid rgba(240,165,0,.3);border-radius:4px;padding:4px 12px;font-size:11px;color:var(--accent)}
+.reload-btn{background:rgba(240,165,0,.1);border:1px solid rgba(240,165,0,.3);border-radius:4px;padding:5px 14px;font-size:11px;color:var(--accent);cursor:pointer;font-family:'Barlow',sans-serif;transition:all .2s}
+.reload-btn:hover{background:rgba(240,165,0,.2)}
+
+/* LOADING */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:16px}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{color:var(--muted);font-size:14px}
+.loading-sub{color:var(--muted);font-size:11px;opacity:.6}
+
+/* ERROR */
+.error-box{background:rgba(255,68,68,.08);border:1px solid rgba(255,68,68,.3);border-radius:8px;padding:24px;margin:24px;color:#ff7b72}
+.error-box h3{margin-bottom:8px;font-size:16px}
+.error-box code{background:rgba(0,0,0,.3);padding:2px 6px;border-radius:3px;font-size:11px}
+
+/* KPI */
+.kpi-bar{display:flex;gap:10px;padding:12px 24px;background:var(--panel);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 18px;flex:1;min-width:160px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.kpi:hover{border-color:var(--accent);transform:translateY(-1px)}
+.kpi::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%}
+.kpi.k1::before{background:var(--accent)}.kpi.k2::before{background:var(--red)}.kpi.k3::before{background:var(--blue)}.kpi.k4::before{background:var(--purple)}
+.kpi-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.kpi-num{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;line-height:1}
+.kpi.k1 .kpi-num{color:var(--accent)}.kpi.k2 .kpi-num{color:var(--red)}.kpi.k3 .kpi-num{color:var(--blue)}.kpi.k4 .kpi-num{color:var(--purple)}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:3px}
+.kpi-total{font-size:11px;color:var(--muted);margin-top:2px;font-family:'Barlow Condensed',sans-serif}
+.kpi-total span{color:var(--green)}
+.pri-pills{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+.ppill{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;font-family:'Barlow Condensed',sans-serif}
+.ppill.p1{background:rgba(240,165,0,.15);color:var(--p1);border:1px solid rgba(240,165,0,.3)}
+.ppill.p2{background:rgba(88,166,255,.12);color:var(--p2);border:1px solid rgba(88,166,255,.25)}
+.ppill.p3{background:rgba(139,148,158,.12);color:var(--p3);border:1px solid rgba(139,148,158,.2)}
+.ppill.pp{background:rgba(255,123,114,.1);color:var(--pp);border:1px solid rgba(255,123,114,.2)}
+
+/* TABS */
+.tabs{display:flex;gap:2px;padding:12px 24px 0;background:var(--panel)}
+.tab{padding:8px 22px;border-radius:6px 6px 0 0;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);background:var(--card);border:1px solid var(--border);border-bottom:none;transition:all .15s;display:flex;align-items:center;gap:6px}
+.tab:hover{color:var(--text)}.tab.active{background:var(--bg);color:var(--accent);border-color:var(--accent);border-bottom-color:var(--bg)}
+.tab-count{background:rgba(240,165,0,.2);color:var(--accent);border-radius:8px;padding:1px 7px;font-size:10px}
+.tab.active .tab-count{background:var(--accent);color:#000}
+
+/* CONTENT */
+.content{padding:14px 24px}
+.fbar{display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:10px 14px}
+.fbar label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;white-space:nowrap}
+.fbar select,.fbar input{background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:5px 9px;font-size:12px;font-family:'Barlow',sans-serif}
+.fbar select:focus,.fbar input:focus{outline:none;border-color:var(--accent)}
+.fg{display:flex;align-items:center;gap:6px}
+.fbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.rcount{background:var(--accent);color:#000;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:700;white-space:nowrap}
+.btn-reset{background:rgba(255,255,255,.06);color:var(--muted);border:1px solid var(--border);border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'Barlow',sans-serif}
+.btn-reset:hover{color:var(--text);border-color:var(--muted)}
+.twrap{overflow-x:auto;border-radius:6px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead tr{background:#1a2030}
+thead th{padding:9px 10px;text-align:left;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--accent);white-space:nowrap;cursor:pointer;user-select:none}
+thead th:hover,thead th.sorted{color:var(--accent)}
+tbody tr{border-bottom:1px solid #1e2533;transition:background .1s}
+tbody tr:hover{background:rgba(240,165,0,.04)}
+tbody tr.pri-1{border-left:3px solid var(--p1)}
+tbody tr.pri-2{border-left:3px solid var(--p2)}
+tbody tr.pri-3{border-left:3px solid var(--p3)}
+tbody tr.pri-p{border-left:3px solid var(--pp)}
+tbody td{padding:7px 10px;vertical-align:top}
+td.desc,td.obs{word-break:break-word}td.desc{max-width:230px}td.obs{max-width:170px;font-size:11px;color:var(--muted)}
+td.val{font-family:'Barlow Condensed',sans-serif;font-size:12px;text-align:right;color:#7ee787;white-space:nowrap}
+td.sc{font-size:11px;color:#79c0ff}
+.m{color:var(--muted);font-size:11px}
+.badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:600;text-transform:uppercase;white-space:nowrap}
+.b-ant{background:rgba(56,139,253,.12);color:#6cb6ff;border:1px solid rgba(56,139,253,.25)}
+.b-sa{background:rgba(255,68,68,.1);color:#ff7b72;border:1px solid rgba(255,68,68,.2)}
+.b-aok{background:rgba(63,185,80,.12);color:var(--green);border:1px solid rgba(63,185,80,.25)}
+.b-sc{background:rgba(163,113,247,.12);color:#d2a8ff;border:1px solid rgba(163,113,247,.25)}
+.b-none{background:rgba(139,148,158,.08);color:var(--muted);border:1px solid rgba(139,148,158,.15)}
+.pbadge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:12px}
+.pbadge.p1{background:rgba(240,165,0,.2);color:var(--p1);border:1px solid rgba(240,165,0,.4)}
+.pbadge.p2{background:rgba(88,166,255,.15);color:var(--p2);border:1px solid rgba(88,166,255,.3)}
+.pbadge.p3{background:rgba(139,148,158,.15);color:var(--p3);border:1px solid rgba(139,148,158,.3)}
+.pbadge.pp{background:rgba(255,123,114,.12);color:var(--pp);border:1px solid rgba(255,123,114,.25)}
+tfoot tr{background:#141c28;border-top:2px solid var(--border)}
+tfoot td{padding:8px 10px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;color:var(--accent)}
+.empty{text-align:center;padding:60px;color:var(--muted);font-size:14px}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="logo">⚙ LUSATECH</div>
+    <div class="logo-sub">Dashboard de Actividades · Servicios</div>
+  </div>
+  <div class="header-right">
+    <button class="reload-btn" onclick="loadExcel()">↻ Actualizar datos</button>
+    <div class="hdate" id="hdate"></div>
+  </div>
+</div>
+
+<div id="mainContent">
+  <div class="loading" id="loadingEl">
+    <div class="spinner"></div>
+    <div class="loading-txt">Cargando datos del Excel...</div>
+    <div class="loading-sub" id="loadingMsg">Conectando con GitHub...</div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// CONFIGURACIÓN — CAMBIA ESTA URL AL SUBIR TU EXCEL A GITHUB
+// ═══════════════════════════════════════════════════════════════════
+// Formato: https://raw.githubusercontent.com/TU-USUARIO/TU-REPO/main/Actividades_Lusatech.xlsx
+const EXCEL_URL = "REEMPLAZA_CON_TU_URL_RAW_DE_GITHUB";
+// Ejemplo: "https://raw.githubusercontent.com/lusatech/dashboard/main/Actividades_Lusatech.xlsx"
+// ═══════════════════════════════════════════════════════════════════
+
+let DB = { consolidado:[], sin_aprobacion:[], sin_anticipo:[], sin_cotizar:[] };
+let currentTab = 'consolidado';
+let sortK=null, sortD=1;
+let fS='', fA='', fE='', fC='', fP='';
+
+const $ = id => document.getElementById(id);
+
+// ── DATE SERIAL → DD/MM/YYYY ──────────────────────────────────────
+function excelDate(v){
+  if(!v) return null;
+  if(typeof v==='string' && v.includes('/')) return v;
+  if(typeof v==='number'){
+    const d = new Date(Math.round((v - 25569)*86400*1000));
+    return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()}`;
+  }
+  if(v instanceof Date) return `${String(v.getDate()).padStart(2,'0')}/${String(v.getMonth()+1).padStart(2,'0')}/${v.getFullYear()}`;
+  return String(v);
+}
+
+function normNum(v){
+  if(v==null||v==='') return null;
+  const n = parseFloat(String(v).replace(/[^0-9.-]/g,''));
+  return isNaN(n) ? null : Math.round(n);
+}
+function normPri(v){
+  if(v==null||v==='') return null;
+  const n = parseInt(v); return isNaN(n) ? String(v).trim() : n;
+}
+function cleanStr(v){
+  if(v==null||v==='') return null;
+  const s = String(v).trim().replace(/\xa0/g,'').replace('#N/A','N/A');
+  return s||null;
+}
+
+// ── PARSE SHEETS ──────────────────────────────────────────────────
+function parseConsolidado(ws){
+  // Headers at row 4 (index 3), cols B-T (index 1-19)
+  const rows = [];
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for(let r=4; r<=range.e.r; r++){  // row index 4 = Excel row 5
+    const g = col => { const c = ws[XLSX.utils.encode_cell({r,c:col})]; return c?c.v:null; };
+    const tipo = cleanStr(g(1));
+    if(!tipo) continue;
+    rows.push({
+      TIPO:tipo, SC:cleanStr(g(2)), COT:cleanStr(g(3)), ACTIVO:cleanStr(g(4)),
+      DESC:cleanStr(g(5)), VENTA:normNum(g(6)), PRES:normNum(g(7)),
+      FECHA:excelDate(g(8)), ESTADO:cleanStr(g(9)), CONTACTO:cleanStr(g(10)),
+      EQUIPO:cleanStr(g(11)), AREA:cleanStr(g(12)), DEP:cleanStr(g(13)),
+      OBS:cleanStr(g(14)), SOLPED:cleanStr(g(15)), OC:cleanStr(g(16)),
+      MANDATO:cleanStr(g(17)), FAC:cleanStr(g(18)), PRI:normPri(g(19))
+    });
+  }
+  return rows;
+}
+
+function parseStdSheet(ws, hasPres=true){
+  // Headers at row 1 (index 0), data from row 2
+  const rows = [];
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for(let r=1; r<=range.e.r; r++){
+    const g = col => { const c = ws[XLSX.utils.encode_cell({r,c:col})]; return c?c.v:null; };
+    const sc = cleanStr(g(0));
+    if(!sc && !cleanStr(g(3))) continue;
+    if(hasPres){
+      rows.push({
+        SC:sc, COT:cleanStr(g(1)), ACTIVO:cleanStr(g(2)), DESC:cleanStr(g(3)),
+        VENTA:normNum(g(4)), PRES:normNum(g(5)), ESTADO:cleanStr(g(6)),
+        CONTACTO:cleanStr(g(7)), EQUIPO:cleanStr(g(8)), AREA:cleanStr(g(9)),
+        DEP:cleanStr(g(10)), OBS:cleanStr(g(11)), SOLPED:cleanStr(g(12)),
+        OC:cleanStr(g(13)), MANDATO:cleanStr(g(14)), FAC:cleanStr(g(15)),
+        PRI:normPri(g(16))
+      });
+    } else {
+      // SIN COTIZAR — no PRES column, has DECISION col
+      rows.push({
+        SC:sc, COT:cleanStr(g(1)), ACTIVO:cleanStr(g(2)), DESC:cleanStr(g(3)),
+        VENTA:normNum(g(4)), ESTADO:cleanStr(g(5)), CONTACTO:cleanStr(g(6)),
+        EQUIPO:cleanStr(g(7)), AREA:cleanStr(g(8)), DEP:cleanStr(g(9)),
+        OBS:cleanStr(g(10)), SOLPED:cleanStr(g(11)), OC:cleanStr(g(12)),
+        MANDATO:cleanStr(g(13)), FAC:cleanStr(g(14)), DECISION:cleanStr(g(15)),
+        PRI:normPri(g(16)), PRES:null
+      });
+    }
+  }
+  return rows;
+}
+
+// ── LOAD EXCEL FROM GITHUB ────────────────────────────────────────
+async function loadExcel(){
+  $("mainContent").innerHTML = `<div class="loading" id="loadingEl">
+    <div class="spinner"></div>
+    <div class="loading-txt">Cargando Excel desde GitHub...</div>
+    <div class="loading-sub" id="loadingMsg">Descargando archivo...</div>
+  </div>`;
+
+  // Check if URL is configured
+  if(EXCEL_URL === "REEMPLAZA_CON_TU_URL_RAW_DE_GITHUB"){
+    showUrlHelper();
+    return;
+  }
+
+  try {
+    $("loadingMsg") && ($("loadingMsg").textContent = "Descargando archivo...");
+    const res = await fetch(EXCEL_URL);
+    if(!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+
+    $("loadingMsg") && ($("loadingMsg").textContent = "Procesando hojas...");
+    const buf = await res.arrayBuffer();
+    const wb  = XLSX.read(buf, {type:'array', cellDates:false});
+
+    // Parse each sheet
+    const sheetConsolidado = wb.Sheets['Consolidado'];
+    const sheetSinAprob    = wb.Sheets['SIN APROBACI\u00d3N'];
+    const sheetSinAnticipo = wb.Sheets['APROBADAS SIN ANTICIPO'];
+    const sheetSinCotizar  = wb.Sheets['SIN COTIZAR'];
+
+    if(!sheetConsolidado) throw new Error('No se encontró la hoja "Consolidado"');
+
+    DB.consolidado    = parseConsolidado(sheetConsolidado);
+    DB.sin_aprobacion = sheetSinAprob    ? parseStdSheet(sheetSinAprob, true)    : [];
+    DB.sin_anticipo   = sheetSinAnticipo ? parseStdSheet(sheetSinAnticipo, true)  : [];
+    DB.sin_cotizar    = sheetSinCotizar  ? parseStdSheet(sheetSinCotizar, false)  : [];
+
+    renderApp();
+  } catch(err){
+    $("mainContent").innerHTML = `
+      <div class="error-box">
+        <h3>❌ Error al cargar el Excel</h3>
+        <p style="margin:8px 0">${err.message}</p>
+        <p style="margin-top:12px;font-size:12px;color:var(--muted)">
+          Asegúrate de que:<br>
+          • La URL en el código sea la URL <strong>raw</strong> de GitHub<br>
+          • El archivo se llame exactamente <code>Actividades_Lusatech.xlsx</code><br>
+          • El repositorio sea <strong>público</strong>
+        </p>
+        <button class="reload-btn" onclick="loadExcel()" style="margin-top:16px">↻ Reintentar</button>
+      </div>`;
+  }
+}
+
+function showUrlHelper(){
+  $("mainContent").innerHTML = `
+    <div class="error-box" style="border-color:rgba(240,165,0,.4);background:rgba(240,165,0,.05)">
+      <h3 style="color:var(--accent)">⚙ Configura la URL de tu Excel</h3>
+      <p style="margin:12px 0;color:var(--text)">Abre este archivo HTML en un editor de texto y reemplaza la línea:</p>
+      <code style="display:block;padding:10px;margin:8px 0;font-size:12px;line-height:1.6">
+        const EXCEL_URL = "REEMPLAZA_CON_TU_URL_RAW_DE_GITHUB";
+      </code>
+      <p style="color:var(--text)">Por tu URL real de GitHub:</p>
+      <code style="display:block;padding:10px;margin:8px 0;font-size:12px;line-height:1.6;color:#7ee787">
+        const EXCEL_URL = "https://raw.githubusercontent.com/TU-USUARIO/TU-REPO/main/Actividades_Lusatech.xlsx";
+      </code>
+      <p style="margin-top:12px;font-size:12px;color:var(--muted)">
+        Guarda el HTML → Súbelo a GitHub → ¡Listo!
+      </p>
+    </div>`;
+}
+
+// ── RENDER APP ────────────────────────────────────────────────────
+function renderApp(){
+  $("mainContent").innerHTML = `
+    <div class="kpi-bar" id="kpiBar"></div>
+    <div class="tabs" id="tabsEl"></div>
+    <div class="content">
+      <div class="fbar" id="fbarEl"></div>
+      <div class="twrap"><table><thead id="thead"></thead><tbody id="tbody"></tbody><tfoot id="tfoot"></tfoot></table></div>
+    </div>`;
+  renderKPI(); renderTabs(); renderFilters(); renderTable();
+}
+
+// ── PRIORITY PILLS ────────────────────────────────────────────────
+function priPills(rows){
+  const cnt={};
+  rows.forEach(r=>{ if(r.PRI!=null){ const k=String(r.PRI); cnt[k]=(cnt[k]||0)+1; } });
+  let h='<div class="pri-pills">';
+  if(cnt['1']) h+=`<span class="ppill p1">🔥 P1: ${cnt['1']}</span>`;
+  if(cnt['2']) h+=`<span class="ppill p2">⚡ P2: ${cnt['2']}</span>`;
+  if(cnt['3']) h+=`<span class="ppill p3">🔷 P3: ${cnt['3']}</span>`;
+  if(cnt['PENDIENTE']) h+=`<span class="ppill pp">⏳ Pend: ${cnt['PENDIENTE']}</span>`;
+  return h+'</div>';
+}
+
+// ── KPI ───────────────────────────────────────────────────────────
+function renderKPI(){
+  const tvAll = DB.consolidado.reduce((s,r)=>s+(r.VENTA||0),0);
+  $("kpiBar").innerHTML = `
+    <div class="kpi k1" onclick="setTab('consolidado')">
+      <div class="kpi-lbl">📊 Consolidado</div>
+      <div class="kpi-num">${DB.consolidado.length}</div>
+      <div class="kpi-sub">Total actividades registradas</div>
+      <div class="kpi-total">Valor total: <span>$${tvAll.toLocaleString('es-CO')}</span></div>
+      ${priPills(DB.consolidado)}
+    </div>
+    <div class="kpi k2" onclick="setTab('sin-aprobacion')">
+      <div class="kpi-lbl">🔴 Sin Aprobación</div>
+      <div class="kpi-num">${DB.sin_aprobacion.length}</div>
+      <div class="kpi-sub">En espera de aprobación oficial</div>
+      ${priPills(DB.sin_aprobacion)}
+    </div>
+    <div class="kpi k3" onclick="setTab('sin-anticipo')">
+      <div class="kpi-lbl">🔵 Sin Anticipo</div>
+      <div class="kpi-num">${DB.sin_anticipo.length}</div>
+      <div class="kpi-sub">Aprobadas pendientes de anticipo</div>
+      ${priPills(DB.sin_anticipo)}
+    </div>
+    <div class="kpi k4" onclick="setTab('sin-cotizar')">
+      <div class="kpi-lbl">🟣 Sin Cotizar</div>
+      <div class="kpi-num">${DB.sin_cotizar.length}</div>
+      <div class="kpi-sub">Sin número de cotización</div>
+      ${priPills(DB.sin_cotizar)}
+    </div>`;
+}
+
+// ── TABS ──────────────────────────────────────────────────────────
+const TABS_CFG = [
+  {id:'consolidado',   lbl:'📊 Consolidado',   key:'consolidado',   hasTipo:true},
+  {id:'sin-aprobacion',lbl:'🔴 Sin Aprobación', key:'sin_aprobacion',hasTipo:false},
+  {id:'sin-anticipo',  lbl:'🔵 Sin Anticipo',   key:'sin_anticipo',  hasTipo:false},
+  {id:'sin-cotizar',   lbl:'🟣 Sin Cotizar',    key:'sin_cotizar',   hasTipo:false},
+];
+const COLS_BASE=[
+  {k:'SC',lbl:'SC',w:'85px'},{k:'COT',lbl:'N° Cotización',w:'105px'},{k:'ACTIVO',lbl:'Activo',w:'100px'},
+  {k:'DESC',lbl:'Descripción',w:'240px',cls:'desc'},{k:'VENTA',lbl:'Valor Venta',w:'105px',num:true},
+  {k:'PRES',lbl:'Pres. Material',w:'105px',num:true},{k:'FECHA',lbl:'F. Entrega',w:'85px'},
+  {k:'ESTADO',lbl:'Estado',w:'100px'},{k:'CONTACTO',lbl:'Contacto',w:'115px'},{k:'EQUIPO',lbl:'Equipo',w:'70px'},
+  {k:'AREA',lbl:'Área',w:'85px'},{k:'DEP',lbl:'Dependencia',w:'85px'},{k:'SOLPED',lbl:'N° Solped',w:'95px'},
+  {k:'OC',lbl:'N° OC',w:'100px'},{k:'MANDATO',lbl:'Mandato',w:'110px'},{k:'FAC',lbl:'Facturación',w:'90px'},
+  {k:'OBS',lbl:'Observación',w:'175px',cls:'obs'},{k:'PRI',lbl:'P',w:'36px'},
+];
+const TIPO_COL={k:'TIPO',lbl:'Tipo',w:'120px'};
+
+function renderTabs(){
+  $("tabsEl").innerHTML = TABS_CFG.map(t=>`
+    <div class="tab${t.id===currentTab?' active':''}" onclick="setTab('${t.id}')">
+      ${t.lbl}<span class="tab-count">${DB[t.key].length}</span>
+    </div>`).join('');
+}
+function setTab(id){currentTab=id;sortK=null;fS='';fA='';fE='';fC='';fP='';renderTabs();renderFilters();renderTable();}
+
+// ── FILTERS ───────────────────────────────────────────────────────
+function renderFilters(){
+  const t=TABS_CFG.find(t=>t.id===currentTab);
+  const base=DB[t.key];
+  const areas=[...new Set(base.map(r=>r.AREA).filter(v=>v&&v!=='N/A'))].sort();
+  const equipos=[...new Set(base.map(r=>r.EQUIPO).filter(v=>v&&v!=='N/A'&&v!=='PENDIENTE'))].sort();
+  const prids=[...new Set(base.map(r=>r.PRI).filter(v=>v!=null))].sort((a,b)=>String(a).localeCompare(String(b)));
+  const priLabel=p=>p==1?'🔥 Alta':p==2?'⚡ Media':p==3?'🔷 Baja':p==='PENDIENTE'?'⏳ Pend.':String(p);
+  $("fbarEl").innerHTML=`
+    <div class="fg"><label>🔍</label><input type="text" placeholder="Buscar desc / cot / SC..." value="${fS}" oninput="sf('s',this.value)" style="width:200px"></div>
+    <div class="fg"><label>Área:</label><select onchange="sf('a',this.value)"><option value="">Todas</option>${areas.map(a=>`<option value="${a}"${fA===a?' selected':''} >${a}</option>`).join('')}</select></div>
+    <div class="fg"><label>Equipo:</label><select onchange="sf('e',this.value)"><option value="">Todos</option>${equipos.map(e=>`<option value="${e}"${fE===e?' selected':''} >${e}</option>`).join('')}</select></div>
+    <div class="fg"><label>Contacto:</label><input type="text" placeholder="..." value="${fC}" oninput="sf('c',this.value)" style="width:110px"></div>
+    <div class="fg"><label>Prioridad:</label><select onchange="sf('p',this.value)"><option value="">Todas</option>${prids.map(p=>`<option value="${p}"${fP===String(p)?' selected':''} >${priLabel(p)}</option>`).join('')}</select></div>
+    <div class="fbar-right"><button class="btn-reset" onclick="resetFilters()">✕ Limpiar</button><span class="rcount" id="rcount">—</span></div>`;
+}
+function sf(t,v){if(t==='s')fS=v;else if(t==='a')fA=v;else if(t==='e')fE=v;else if(t==='c')fC=v;else fP=v;renderTable();}
+function resetFilters(){fS='';fA='';fE='';fC='';fP='';renderFilters();renderTable();}
+
+// ── TABLE ─────────────────────────────────────────────────────────
+const cop=n=>n!=null&&n!==0?'$'+Number(n).toLocaleString('es-CO'):'<span class="m">—</span>';
+const safe=v=>(v==null||v===''||v==='null'||v==='None')?'<span class="m">—</span>':String(v);
+const priClass=p=>p==1?'p1':p==2?'p2':p==3?'p3':p==='PENDIENTE'?'pp':'';
+const priRowClass=p=>p==1?'pri-1':p==2?'pri-2':p==3?'pri-3':p==='PENDIENTE'?'pri-p':'';
+const tipoBadge=t=>!t?'<span class="badge b-none">—</span>':t.includes('ANTICIPO')?'<span class="badge b-ant">SIN ANTICIPO</span>':t.includes('APROBAC')||t.includes('APROBACI')?'<span class="badge b-sa">SIN APROBACIÓN</span>':t.includes('COTIZAR')?'<span class="badge b-sc">SIN COTIZAR</span>':`<span class="badge b-none">${t}</span>`;
+const estadoBadge=e=>!e||e==='—'?'<span class="badge b-none">—</span>':e==='APROBADO'?'<span class="badge b-aok">APROBADO</span>':e.includes('APROBAR')||e.includes('SIN APRO')?'<span class="badge b-sa">SIN APROBAR</span>':e.includes('COTIZAR')?'<span class="badge b-sc">SIN COTIZAR</span>':`<span class="badge b-none">${e}</span>`;
+
+function getRows(){
+  const t=TABS_CFG.find(t=>t.id===currentTab);
+  let rows=[...DB[t.key]];
+  if(fS) rows=rows.filter(r=>(r.DESC||''). toLowerCase().includes(fS.toLowerCase())||String(r.COT||'').includes(fS)||String(r.SC||'').toLowerCase().includes(fS.toLowerCase()));
+  if(fA) rows=rows.filter(r=>r.AREA===fA);
+  if(fE) rows=rows.filter(r=>r.EQUIPO===fE);
+  if(fC) rows=rows.filter(r=>(r.CONTACTO||''). toLowerCase().includes(fC.toLowerCase()));
+  if(fP) rows=rows.filter(r=>String(r.PRI||'')==fP);
+  if(sortK) rows.sort((a,b)=>{let av=a[sortK],bv=b[sortK];if(av==null)av=sortD>0?Infinity:-Infinity;if(bv==null)bv=sortD>0?Infinity:-Infinity;return(typeof av==='number'&&typeof bv==='number')?(av-bv)*sortD:String(av).localeCompare(String(bv))*sortD;});
+  return rows;
+}
+function sortBy(k){sortK===k?sortD*=-1:(sortK=k,sortD=1);renderTable();}
+
+function renderTable(){
+  const t=TABS_CFG.find(t=>t.id===currentTab);
+  const rows=getRows();
+  const cols=t.hasTipo?[TIPO_COL,...COLS_BASE]:COLS_BASE;
+  $("thead").innerHTML='<tr>'+cols.map(c=>`<th style="width:${c.w}" onclick="sortBy('${c.k}')" class="${sortK===c.k?'sorted':''}">${c.lbl} <span style="opacity:.4;font-size:9px">${sortK===c.k?(sortD>0?'▲':'▼'):'⇅'}</span></th>`).join('')+'</tr>';
+  $("tbody").innerHTML=rows.length?rows.map(r=>`<tr class="${priRowClass(r.PRI)}">`+cols.map(c=>{
+    if(c.k==='TIPO') return`<td>${tipoBadge(r.TIPO)}</td>`;
+    if(c.k==='ESTADO') return`<td>${estadoBadge(r.ESTADO)}</td>`;
+    if(c.k==='SC') return`<td class="sc">${safe(r.SC)}</td>`;
+    if(c.k==='PRI') return r.PRI!=null?`<td style="text-align:center"><span class="pbadge ${priClass(r.PRI)}">${r.PRI}</span></td>`:`<td class="m" style="text-align:center">—</td>`;
+    if(c.num) return`<td class="val">${cop(r[c.k])}</td>`;
+    return`<td class="${c.cls||''}">${safe(r[c.k])}</td>`;
+  }).join('')+'</tr>').join(''):`<tr><td colspan="${cols.length}" class="empty">📭 Sin registros para este filtro</td></tr>`;
+  const tv=rows.reduce((s,r)=>s+(r.VENTA||0),0), tp=rows.reduce((s,r)=>s+(r.PRES||0),0);
+  const sc=t.hasTipo?5:4;
+  $("tfoot").innerHTML=`<tr><td colspan="${sc}" style="color:var(--muted);font-size:11px">TOTAL — ${rows.length} registros</td><td class="val" style="color:var(--accent)">$${tv.toLocaleString('es-CO')}</td><td class="val" style="color:var(--accent)">$${tp.toLocaleString('es-CO')}</td><td colspan="${cols.length-sc-2}"></td></tr>`;
+  const rc=$("rcount"); if(rc) rc.textContent=rows.length+' registros';
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+const now=new Date();
+$("hdate").textContent=now.toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
+loadExcel();
+</script>
+</body>
+</html>
